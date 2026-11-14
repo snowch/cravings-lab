@@ -83,7 +83,7 @@ test('guided practices and optional timer', async ({page}) => {
 
 test('all routes fit viewport and work without storage', async ({page}) => {
   await page.addInitScript(()=>Object.defineProperty(window,'localStorage',{get(){throw new Error('Disabled');}}));
-  for(const route of ['home','check-in','tools','experiments','reflect','learn','privacy']) {
+  for(const route of ['home','check-in','tools','experiments','reflect','learn','support','privacy']) {
     await page.goto('/#'+route);
     await expect(page.locator('main')).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);

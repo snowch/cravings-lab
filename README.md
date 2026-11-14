@@ -7,6 +7,7 @@ A gentle self-reflection toolkit for understanding cravings and changing automat
 ## What it does
 
 - Lightweight hunger, craving and context check-ins, with optional mood and eating-control notes.
+- Six short lessons with examples, optional understanding checks and links into related activities.
 - Four guided practices: noticing an urge, cognitive defusion, checking needs and an optional timed pause.
 - One active experiment at a time, with editable plans and end-of-experiment reflections.
 - Personal context summaries, check-in history and practice reflections.
@@ -40,7 +41,7 @@ Tests exercise desktop and mobile flows, tab-only behaviour, persistence, export
 
 ## Deployment
 
-Pushing `main` runs `.github/workflows/pages.yml`. The workflow installs development dependencies, checks JavaScript, runs browser/accessibility tests, then uploads only the five static application assets to GitHub Pages. Pull requests run the checks without deployment. Set repository **Settings → Pages → Source** to **GitHub Actions**.
+Pushing `main` runs `.github/workflows/pages.yml`. The workflow installs development dependencies, checks JavaScript, runs browser/accessibility tests, then uploads only the six static application assets to GitHub Pages. Pull requests run the checks without deployment. Set repository **Settings → Pages → Source** to **GitHub Actions**.
 
 Relative asset paths and hash-based routes support the `/cravings-lab/` project path without server rewrites.
 
@@ -48,6 +49,7 @@ Relative asset paths and hash-based routes support the `/cravings-lab/` project 
 
 - `index.html`: application shell, navigation and delete confirmation.
 - `app.js`: screens, content, interactions and storage controls.
+- `lessons.js`: educational content and understanding-check explanations.
 - `model.js`: data shape, storage reading, escaping and summaries.
 - `style.css`: responsive styles, focus states and reduced-motion support.
 - `tests/`: Playwright flows and axe accessibility checks.

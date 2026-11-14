@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "playwright test",
-    "check": "node --check app.js && node --check model.js",
+    "check": "node --check app.js && node --check model.js && node --check lessons.js",
     "serve": "python3 -m http.server 4173"
   },
   "devDependencies": {
