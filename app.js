@@ -1,0 +1,191 @@
+import { STORAGE_KEY, emptyState, readState, summarize, escapeHTML as esc } from './model.js';
+
+let storage;
+try { storage = window.localStorage; } catch { /* Session-only remains available. */ }
+let state = storage ? readState(storage) || emptyState() : emptyState();
+let persistent = Boolean(storage && readState(storage));
+let storageFailed = false;
+let toastTimeout;
+let timer;
+let toolStep = 0;
+let selectedExperiment = '';
+const main = document.querySelector('main');
+const dateFormat = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+const date = value => { const d = new Date(value); return Number.isNaN(d.getTime()) ? 'Unknown date' : dateFormat.format(d); };
+const uid = () => crypto.randomUUID();
+const btn = (text, href, type='primary') => `<a class="button ${type}" href="${href}">${text}</a>`;
+const head = (eyebrow, title, text) => `<div class="page-head"><p class="eyebrow">${eyebrow}</p><h1>${title}</h1><p>${text}</p></div>`;
+function announce(message) {
+  clearTimeout(toastTimeout);
+  document.querySelector('#announcement').textContent = message;
+  toastTimeout = setTimeout(() => { document.querySelector('#announcement').textContent = ''; }, 6000);
+}
+function save() {
+  if (!persistent) return;
+  try { storage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch { persistent = false; storageFailed = true; announce('Device storage is unavailable or full. Your entries are now kept only in this tab. Export a copy before closing.'); }
+}
+function modeNote() {
+  if (storageFailed) return '<p class="notice">Device storage is unavailable. These entries are only in this tab. Export them before closing.</p>';
+  return `<p class="small muted"><span class="status-dot"></span>${persistent ? 'Saving on this browser and device.' : 'Tab-only mode: entries disappear when you reload or close this tab.'} <a href="#privacy">Manage your data</a></p>`;
+}
+function storageBanner() {
+  return `<div class="note storage-note"><p><strong>${persistent ? 'A private space for your patterns.' : 'Your reflections, your choice.'}</strong><br>${persistent ? 'Entries are saved in this browser. No account, analytics or app server receives them.' : 'Start in tab-only mode, or choose to save entries on this device. No account or tracking.'}</p><div class="actions">${persistent ? btn('Manage my data', '#privacy', 'secondary') : '<button class="secondary" data-action="enable-storage">Save on this device</button><a class="text-link" href="#privacy">How it works</a>'}</div></div>`;
+}
+function home() {
+  const active = state.experiments.find(e => e.status === 'active');
+  return `<section class="hero"><div class="hero-copy"><p class="eyebrow">SMALL EXPERIMENTS. MORE UNDERSTANDING.</p><h1>A little more room<br>to choose.</h1><p>Explore your cravings with curiosity. Notice what’s happening, try something small, and find what helps you.</p><div class="actions">${btn('Take a moment <span aria-hidden="true">→</span>', '#check-in')}${btn('Help with an urge', '#tools', 'secondary')}</div></div><div class="hero-art" aria-hidden="true"><div class="orbit"><span class="art-label label-one">notice</span><div class="stone"><svg viewBox="0 0 80 80" fill="none"><path d="M22 51c-3-24 13-35 36-34 1 25-11 39-33 34M23 58l29-33M32 45l-2-14M40 37l13-1" stroke="#e1edbd" stroke-width="2.5" stroke-linecap="round"/></svg></div><span class="art-label label-two">make space</span><span class="art-label label-three">choose</span></div><span class="spark">✳</span></div></section>
+  ${storageBanner()}
+  <div class="section-heading"><h2>Where would you like to start?</h2><span class="small muted">No perfect starting point.</span></div>
+  <div class="grid three"><article class="card"><div class="card-icon">◷</div><p class="step">01 · Notice</p><h3>Check in, gently</h3><p>A short pause to notice hunger, an urge, and what’s happening around you.</p><a class="text-link" href="#check-in">Capture a moment →</a></article><article class="card"><div class="card-icon peach">〰</div><p class="step">02 · Make space</p><h3>An urge isn’t an instruction</h3><p>Practise a brief exercise. You can choose to eat, too. This is about having options.</p><a class="text-link" href="#tools">Find a practice →</a></article><article class="card"><div class="card-icon lime">⚘</div><p class="step">03 · Explore</p><h3>Try one small change</h3><p>Turn a recurring situation into a gentle experiment. Learn what works for you.</p><a class="text-link" href="#experiments">${active ? 'Visit your experiment' : 'Choose an experiment'} →</a></article></div>
+  <div class="section-heading"><h2>A thought to take with you</h2><a href="#learn" class="text-link">Explore the evidence →</a></div><div class="note green"><p>“I’m noticing a craving” can open up more possibilities than “I have to act on this.”<br><span class="muted">You don’t need to eliminate every urge to respond with more choice.</span></p></div>`;
+}
+function chips(name, values, checked='') {
+  return `<div class="chips">${values.map(v => `<label class="chip"><input type="radio" name="${name}" value="${esc(v)}" ${v === checked ? 'checked' : ''}><span>${esc(v)}</span></label>`).join('')}</div>`;
+}
+function range(name, title, left, right) {
+  return `<div class="field"><div class="range-top"><label for="${name}">${title}</label><output class="range-value" for="${name}" id="${name}-out">5</output></div><input id="${name}" name="${name}" type="range" min="0" max="10" value="5"><div class="range-labels"><span>0 · ${left}</span><span>10 · ${right}</span></div></div>`;
+}
+function checkIn() {
+  return `${head('A MOMENT OF CURIOSITY', 'What’s happening right now?', 'There’s nothing to get right. Capture just enough to help you understand this moment.')}${modeNote()}<div class="split"><form id="check-form" class="card">
+    ${range('hunger', 'How physically hungry do you feel?', 'Not hungry', 'Very hungry')}${range('craving', 'How strong is the urge?', 'No urge', 'Very strong')}
+    <fieldset class="field"><legend>What’s the context? <span class="optional">Optional</span></legend>${chips('context', ['Watching TV','Taking a break','After a meal','Missed a meal','Working or studying','Socialising','Something else'])}</fieldset>
+    <details><summary>Add a little more context <span class="optional">Optional</span></summary><fieldset class="field"><legend>How are you feeling?</legend>${chips('mood', ['Calm','Stressed','Bored','Tired','Sad','Happy','Mixed'])}</fieldset><fieldset class="field"><legend>How did eating feel, if you ate?</legend><p>Strong desire is different from feeling unable to stop. Neither is a judgement.</p>${chips('control', ['I haven’t eaten','An intentional choice','A bit automatic','Hard to stop'])}</fieldset><div class="field"><label for="food">Food, if relevant <span class="optional">No weighing or calorie counting needed</span></label><input id="food" name="food" type="text" maxlength="120" placeholder="e.g. some chocolate"></div><div class="field"><label for="entry-note">Anything else you noticed?</label><textarea id="entry-note" name="note" maxlength="1500" placeholder="What happened just before? What might you need?"></textarea></div></details>
+    <p class="small muted">The sliders start at 5. Adjust them to reflect how you feel. You can leave optional questions blank.</p><div class="actions"><button class="primary" type="submit">Save check-in <span aria-hidden="true">→</span></button><a href="#home" class="text-link">Leave without saving</a></div>
+  </form><aside class="stack sidebar"><div class="note green"><h3>Hunger deserves a response.</h3><p>If you’re hungry or have missed a meal, eating something satisfying may be the most helpful next step. You don’t have to earn food by completing an exercise.</p></div><div class="card"><h3>Keep it light.</h3><p>A few moments can be enough. You don’t need to log every meal or every craving.</p><p>If tracking increases guilt, restriction or preoccupation with food, take a break. <a href="#learn">Find support</a>.</p></div></aside></div>`;
+}
+const tools = {
+  notice: { title: 'Notice the urge', tag: '1–2 MIN · AWARENESS', desc: 'Make a little space between an urge and your next choice.', steps: [
+    ['Arrive in this moment', 'Feel your feet on the floor. Let your shoulders settle. Breathe in a way that feels comfortable. There’s no special breathing pattern to get right.'],
+    ['Notice, without fixing', 'Where do you notice the urge: a thought, a taste you imagine, a feeling in your body? Try naming it: “There’s a craving here.” It doesn’t need to disappear.'],
+    ['Choose your next step', 'Ask: “Am I hungry? What would support me now?” You might eat, rest, reach out, or return to what you were doing. Eating is a valid choice.'] ] },
+  defusion: { title: 'Unhook from a thought', tag: '2 MIN · COGNITIVE DEFUSION', desc: 'Practise seeing a craving thought as a thought, rather than a command.', steps: [
+    ['Catch the thought', 'Notice the words that show up, such as “I need chocolate right now.” You don’t have to argue with them or decide whether they’re true.'],
+    ['Give it a little space', 'Try: “I’m having the thought that I need chocolate right now.” Then: “I’m noticing that I’m having that thought.” Say it gently, at your own pace.'],
+    ['Let the thought come along', 'The thought may still be here. What would you like to do next, with it present? You can choose to eat. The practice is noticing a choice, not suppressing a craving.'] ] },
+  needs: { title: 'What do I need?', tag: '1–2 MIN · SELF-CHECK', desc: 'Check whether hunger, tiredness, stress or connection needs your attention.', steps: [
+    ['Start with physical hunger', 'Have you eaten enough today? Has it been a long time since a meal? If you’re hungry, a meal or snack can be the right next step. You don’t need to delay eating.'],
+    ['Check the wider picture', 'Are you tired, overwhelmed, bored, lonely, or simply wanting pleasure? More than one thing can be true. Enjoying food is a valid experience too.'],
+    ['Offer one kind response', 'What is one manageable thing you could do? Eat something satisfying, take a short break, message someone, rest, or enjoy chocolate deliberately. You don’t have to solve everything.'] ] },
+  pause: { title: 'An optional pause', tag: '1 MIN · MAKE SPACE', desc: 'If you’re adequately fed and want to pause, take a minute to decide.', steps: [
+    ['Check whether a pause fits', 'If you’re hungry, have missed meals, or delaying food feels restrictive, eat rather than doing this exercise. Otherwise, you can use a short pause to notice what you want.'],
+    ['Take a minute, if you wish', 'Look around, stretch, or sit comfortably. This timer is optional. You can stop or choose to eat at any point; there’s nothing to pass.'],
+    ['Decide deliberately', 'What do you want now? You can eat, do something else, or address another need. Finishing the timer doesn’t make a choice better, and a craving can remain.'] ] }
+};
+function toolsPage() {
+  return `${head('A LITTLE SPACE', 'Practise a different response.', 'Short exercises to explore, not rules to follow. Choose what feels useful today.')}<div class="note green" style="margin-bottom:24px">Hungry or missed a meal? Start with food. These exercises are optional and should never be used to earn food or push through hunger.</div><div class="grid two">${Object.entries(tools).map(([id,t],i) => `<article class="card tool-card"><span class="badge ${i%2 ? 'peach' : ''}">${t.tag}</span><h2>${t.title}</h2><p>${t.desc}</p><div class="actions">${btn('Try this practice →', '#tool/'+id, 'secondary')}</div></article>`).join('')}</div><p class="small muted" style="margin-top:24px">Brief craving techniques have modest, mixed evidence, often from short laboratory studies. They are not a treatment programme. <a href="#learn">Read about the evidence</a>.</p>`;
+}
+function toolPage(id) {
+  const t = tools[id];
+  if (!t) return toolsPage();
+  const finished = toolStep >= t.steps.length;
+  return `<div class="exercise"><a class="text-link" href="#tools">← All practices</a><p class="exercise-progress">${t.title} · ${finished ? 'Reflection' : `Step ${toolStep+1} of ${t.steps.length}`}</p><section class="card exercise-panel">${finished ? `<span class="badge">PRACTICE, NOT PERFECTION</span><h2>What was that like?</h2><p>It’s okay if the urge is still here. A useful practice can simply help you notice another option.</p><fieldset class="field"><legend>Did this feel helpful?</legend>${chips('helpful',['Yes','A little','Not today'])}</fieldset><div class="actions"><button class="primary" data-action="save-practice" data-tool="${id}">Save reflection</button>${btn('Finish without saving', '#tools', 'secondary')}</div>` : `<span class="badge">${t.tag}</span><div class="breath-orb" aria-hidden="true">${['notice','space','choose'][toolStep]}</div><h2>${t.steps[toolStep][0]}</h2><p>${t.steps[toolStep][1]}</p>${id === 'pause' && toolStep === 1 ? '<div class="timer" id="timer" role="timer" aria-label="Optional pause timer">1:00</div><div class="actions" style="margin-bottom:24px"><button class="secondary" data-action="start-timer">Start optional timer</button></div>' : ''}<div class="actions">${toolStep > 0 ? '<button class="secondary" data-action="tool-back">Back</button>' : ''}<button class="primary" data-action="tool-next">${toolStep === 2 ? 'Reflect' : 'Continue'} →</button></div><p class="small muted" style="margin-top:24px;margin-bottom:0">You can leave, eat, or skip ahead at any time.</p>`}</section></div>`;
+}
+const experimentOptions = {
+  meals: { name: 'Make room for a regular meal', description: 'Explore whether a more regular, satisfying meal changes how your evening feels.', plan: 'On days I can, I will make time for a satisfying lunch rather than skipping it.', notice: 'How hungry do I feel later? Is there any difference in automatic eating or distress?' },
+  cue: { name: 'Change one familiar cue', description: 'Try a different routine in a situation where eating often feels automatic.', plan: 'When I settle down to watch TV, I will take a moment to decide what I want, including a snack if I want one.', notice: 'Does this moment of choice feel useful? Am I still eating enough and enjoying food?' },
+  space: { name: 'Practise noticing a thought', description: 'Try a brief defusion exercise in a recurring situation, without needing to eliminate the urge.', plan: 'When I notice “I need chocolate right now”, I will try “I’m having the thought that…” once, then choose what to do.', notice: 'Does the thought feel any less like a command? Can I choose even if the urge stays?' },
+  custom: { name: 'Design my own experiment', description: 'Choose one small, kind change. Avoid fasting, food bans or compensating for eating.', plan: '', notice: '' }
+};
+function experimentsPage() {
+  const active = state.experiments.find(e => e.status === 'active');
+  const completed = state.experiments.filter(e => e.status !== 'active');
+  return `${head('CURIOUS, SMALL, FLEXIBLE', 'One change. Something to learn.', 'An experiment isn’t a promise or a challenge. Try something manageable, then see whether it helps.')}${modeNote()}${active ? `<div class="split"><section class="card"><span class="badge">YOUR CURRENT EXPERIMENT</span><h2>${esc(active.name)}</h2><p class="small muted">Started ${date(active.created)} · Review when you’re ready</p><h3>What I’m trying</h3><p class="review-text">${esc(active.plan)}</p><h3>What I’m curious about</h3><p class="review-text">${esc(active.notice)}</p><form id="experiment-review"><div class="field"><label for="experiment-result">What have you noticed?</label><textarea id="experiment-result" name="result" maxlength="1500" required placeholder="What helped? What got in the way? What would you adapt?"></textarea></div><div class="actions"><button class="primary" type="submit">Save & finish experiment</button><button class="secondary" type="button" data-action="stop-experiment">Stop without a review</button></div></form></section><aside class="note green sidebar"><h3>Information, not a grade.</h3><p>If the change wasn’t useful, that’s useful to know. You can adapt it, stop it, or ask for support.</p><p>Don’t wait for an experiment to finish before responding to hunger or getting help.</p></aside></div>` : `<div class="grid two">${Object.entries(experimentOptions).map(([id,e]) => `<button class="experiment-option ${selectedExperiment===id?'selected':''}" data-action="choose-experiment" data-id="${id}" aria-pressed="${selectedExperiment===id}"><strong>${e.name}</strong><span>${e.description}</span></button>`).join('')}</div><div id="experiment-editor">${selectedExperiment ? experimentEditor() : ''}</div>`}${completed.length ? `<div class="section-heading"><h2>Past experiments</h2></div><div class="stack">${completed.slice().reverse().map(e => `<article class="card"><span class="badge">${e.status === 'completed' ? 'REVIEWED' : 'STOPPED'}</span><h3>${esc(e.name)}</h3><p class="review-text">${esc(e.result || 'Stopped without a review. You can try a different approach whenever you like.')}</p></article>`).join('')}</div>` : ''}`;
+}
+function experimentEditor() {
+  const e = experimentOptions[selectedExperiment];
+  return `<form id="experiment-form" class="card inline-form"><h2>Make it your own</h2><p class="muted">Try it for a few days or about a week. Review sooner if it doesn’t feel helpful.</p>${selectedExperiment==='custom' ? '<div class="field"><label for="exp-name">Experiment name</label><input id="exp-name" name="name" maxlength="120" required></div>' : ''}<div class="field"><label for="exp-plan">What small change will you try?</label><textarea id="exp-plan" name="plan" maxlength="1000" required>${esc(e.plan)}</textarea></div><div class="field"><label for="exp-notice">What would you like to notice?</label><textarea id="exp-notice" name="notice" maxlength="1000" required>${esc(e.notice)}</textarea></div><div class="actions"><button class="primary" type="submit">Start this experiment →</button><button type="button" class="secondary" data-action="cancel-experiment">Cancel</button></div></form>`;
+}
+function reflectPage() {
+  const s = summarize(state.entries);
+  const helpful = state.reviews.filter(r=>r.kind==='practice');
+  const contextCounts = {};
+  state.entries.forEach(e=>{ if(e.context) contextCounts[e.context]=(contextCounts[e.context]||0)+1; });
+  return `${head('LOOK BACK WITH KINDNESS', 'Patterns, not a scorecard.', 'These are snapshots you chose to record, not a complete picture of your eating or your health.')}${modeNote()}${!s.count && !state.reviews.length ? `<div class="card empty"><div class="breath-orb" aria-hidden="true">notice</div><h2>A picture grows one moment at a time.</h2><p>No entries yet. Start with a check-in whenever it feels useful. There’s no daily target and no streak to keep.</p>${btn('Make a check-in', '#check-in')}</div>` : `<div class="grid three"><article class="card"><div class="stat-number">${s.count}</div><h3>Moments recorded</h3><p>A sample of your experience. More entries aren’t necessarily better.</p></article><article class="card"><div class="stat-number">${helpful.length}</div><h3>Practice reflections</h3><p>${helpful.filter(r=>r.helpful==='Yes'||r.helpful==='A little').length} felt helpful or a little helpful. Different tools fit different moments.</p></article><article class="card"><span class="badge">A QUESTION TO EXPLORE</span><h3>${s.top ? esc(s.top.label) : 'What supports you?'}</h3><p>${s.top ? `Appears in ${s.top.count} of ${s.count} check-ins. Could this be a useful situation to explore? This doesn’t establish a cause.` : 'A regular meal, a rest, a change of scene? Look for what feels supportive.'}</p></article></div>${Object.keys(contextCounts).length ? `<section class="card" style="margin-top:22px"><h2>Contexts you’ve recorded</h2><p>Counts reflect your check-ins, not how often these situations happen in everyday life.</p><div class="bars">${Object.entries(contextCounts).sort((a,b)=>b[1]-a[1]).map(([c,n]) => `<div><div class="bar-label"><span>${esc(c)}</span><span>${n}</span></div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(n/s.count*100)}%"></div></div></div>`).join('')}</div></section>` : ''}${s.lossOfControl ? '<div class="note peach support" style="margin-top:22px"><strong>Some eating felt hard to stop.</strong><p>This app cannot tell whether you have an eating disorder. If loss of control repeats or causes distress, you deserve support. <a href="#learn">See options for professional help</a>. You don’t need to reach a particular frequency to ask.</p></div>' : ''}<div class="split" style="margin-top:25px"><form id="reflection-form" class="card"><h2>A gentle review</h2><div class="field"><label for="review-note">What have you learned, and what would support you next?</label><textarea id="review-note" name="note" maxlength="2000" required placeholder="Perhaps a pattern, something that helped, or a reason to take a break from tracking."></textarea></div><button type="submit" class="primary">Save reflection</button></form><aside class="note green"><strong>Is tracking helping?</strong><p>If monitoring makes eating feel more stressful or rigid, it’s okay to pause or stop. Your wellbeing matters more than collecting data.</p>${btn('Explore support', '#learn', 'secondary')}</aside></div>`}
+  ${state.entries.length ? `<div class="section-heading"><h2>Your check-ins</h2><a href="#privacy" class="text-link">Export or delete data →</a></div><div class="card">${state.entries.slice().reverse().map(e=>`<article class="entry"><div class="entry-head"><h3>${date(e.created)}${e.context ? ' · '+esc(e.context) : ''}</h3><button class="delete-entry" data-action="delete-entry" data-id="${esc(e.id)}" aria-label="Delete check-in from ${date(e.created)}">Delete</button></div><p class="small">Hunger ${e.hunger}/10 · Urge ${e.craving}/10${e.mood ? ' · '+esc(e.mood) : ''}${e.control ? ' · '+esc(e.control) : ''}</p>${e.food ? `<p>${esc(e.food)}</p>` : ''}${e.note ? `<p class="review-text">${esc(e.note)}</p>` : ''}</article>`).join('')}</div>` : ''}
+  ${state.reviews.length ? `<div class="section-heading"><h2>Your reflections</h2></div><div class="card">${state.reviews.slice().reverse().map(r=>`<article class="entry"><div class="entry-head"><h3>${date(r.created)}${r.kind==='practice' ? ' · '+esc(tools[r.tool]?.title || 'Practice') : ''}</h3><button class="delete-entry" data-action="delete-review" data-id="${esc(r.id)}">Delete</button></div><p class="review-text">${r.kind==='practice' ? 'Felt helpful: '+esc(r.helpful) : esc(r.note)}</p></article>`).join('')}</div>` : ''}`;
+}
+function learnPage() {
+ return `${head('UNDERSTANDING & SUPPORT', 'Real experiences. Careful claims.', 'Cravings can feel powerful. Understanding what’s happening is more useful than attaching an “addiction” label.')}<div class="split"><div class="stack"><article class="card"><span class="badge">THE IMPORTANT DISTINCTION</span><h2>Craving, habit and loss of control</h2><p>A strong desire for chocolate, eating automatically while watching TV, and feeling unable to stop eating are different experiences. They can overlap, but deserve different responses.</p><p>“Sugar addiction” and “chocolate addiction” are not recognised DSM-5-TR diagnoses. Binge-eating disorder and bulimia nervosa are. Loss of control or distress matters even when an episode does not meet a diagnostic threshold.</p><p>This lab does not screen for, diagnose or treat an eating disorder.</p></article><article class="card"><h2>What the evidence supports</h2><details open><summary>Established: professional care for binge-eating disorder</summary><p>Eating-disorder-focused CBT and guided self-help are recommended treatments. NICE advises regular meals and snacks and avoiding weight-loss dieting during BED treatment because restriction can trigger binge eating. This app is not equivalent to those treatments.</p></details><details><summary>Useful with limits: brief self-monitoring</summary><p>Recording hunger, urges and context can reveal associations. Entries are a selective sample; they cannot show causality. Frequent tracking can also feel intrusive or increase distress. Keep it optional and stop if it is making things worse.</p></details><details><summary>Promising, modest evidence: brief craving exercises</summary><p>Defusion, mindfulness and other brief techniques may help some people respond differently. Much of the evidence comes from short laboratory studies; lasting everyday benefits remain less certain. These tools don’t work for everyone.</p></details><details><summary>Unsettled: sugar as an addictive substance</summary><p>Human evidence that sugar itself causes drug-like addiction is weak. Learning, cues, food restriction and the properties of highly palatable foods may help explain some patterns. That uncertainty doesn’t make someone’s distress less real.</p></details><details><summary>What home technology cannot tell you</summary><p>A glucose rise is not a measure of addiction, craving or reward activity. Watches and eating sensors cannot establish loss of control. Simple self-reflection is more directly relevant to this lab’s purpose than expensive hardware.</p></details></article><article class="card"><h2>Sources & scope</h2><p>Developed from the supplied <em>Sugar and Chocolate “Addiction”</em> research synthesis (14 November 2026), with links to underlying guidance and reviews. This is a self-reflection toolkit for adults, not a clinically validated intervention.</p><ul class="source-list"><li><a href="https://www.nice.org.uk/guidance/ng69/chapter/Recommendations" target="_blank" rel="noopener noreferrer">NICE NG69: eating disorders—recognition and treatment</a><br>Assessment, guided self-help, CBT and regular eating.</li><li><a href="https://www.nhs.uk/mental-health/conditions/binge-eating/treatment/" target="_blank" rel="noopener noreferrer">NHS: treatment for binge-eating disorder</a><br>What professional treatment can involve.</li><li><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC5174153/" target="_blank" rel="noopener noreferrer">Westwater et al. (2016): Sugar addiction—the state of the science</a><br>Critical review of the sugar-addiction hypothesis.</li><li><a href="https://pubmed.ncbi.nlm.nih.gov/31944559/" target="_blank" rel="noopener noreferrer">Review of laboratory-based food-craving interventions</a><br>Short-term findings should not be treated as proof of lasting benefit.</li></ul><p class="small">The research synthesis is background material, not independent clinical endorsement of this app. No calorie, weight, sugar or abstinence target is prescribed here.</p></article></div><aside class="stack sidebar"><section class="card support"><span class="badge peach">YOU DESERVE SUPPORT</span><h2>When to speak to someone</h2><p>Consider your GP or an eating-disorder service if you experience repeated loss of control, distress, secrecy, restriction, purging, or eating difficulties that affect daily life.</p><p>You do not need to be a particular weight or meet a frequency threshold to ask for help.</p><p><a href="https://www.beateatingdisorders.org.uk/get-information-and-support/" target="_blank" rel="noopener noreferrer">Beat: UK eating-disorder support →</a></p><p><a href="https://www.nhs.uk/mental-health/conditions/eating-disorders/overview/" target="_blank" rel="noopener noreferrer">NHS: getting help for an eating disorder →</a></p></section><div class="note peach"><h3>If you feel physically unwell</h3><p>Fainting, dehydration, repeated vomiting or rapid deterioration need medical advice. In the UK, use NHS 111 for urgent advice. Call 999 or go to A&E for immediate danger, severe symptoms or if you cannot keep yourself safe. Outside the UK, use local urgent or emergency services.</p></div><div class="note green"><h3>Keep care connected.</h3><p>If you have diabetes, take appetite-modifying medication, or are receiving eating-disorder care, discuss significant changes in eating with your clinician. Medication decisions belong with a qualified prescriber.</p></div></aside></div>`;
+}
+function privacyPage() {
+ return `${head('YOUR REFLECTIONS BELONG TO YOU', 'A small, private space.', 'No account. No advertising. No analytics. You choose whether this browser remembers your entries.')}<div class="stack privacy-card"><section class="card"><span class="badge">${persistent ? 'DEVICE SAVING IS ON' : 'TAB-ONLY MODE'}</span><h2>Where your entries live</h2><p>${persistent ? 'Your check-ins, experiments and reflections are saved in local storage in this browser on this device. They remain after you close the tab.' : 'Your entries are held in memory in this tab. Reloading or closing the tab clears them. Choose device saving below if you want to return to them.'}</p><p>Entries are not sent to an app server or synced across devices. Device storage is not encrypted by this app: someone using the same browser profile may be able to read it. Browser storage is shared with other apps hosted under the same origin (snowch.github.io). Private browsing or clearing browser data may remove saved entries.</p><p>The site is hosted on GitHub Pages, which receives normal web requests, including your IP address. Opening external support or source links shares a request with those websites. Your entries are not included in those links.</p><div class="actions">${persistent ? '<button class="secondary" data-action="disable-storage">Switch to tab-only mode</button>' : '<button class="primary" data-action="enable-storage">Save on this device</button>'}</div><p class="small muted" style="margin-top:16px;margin-bottom:0">Switching to tab-only removes the saved browser copy and keeps your current entries in this tab until reload or close.</p></section><section class="card"><h2>Take a copy with you</h2><p>Download all check-ins, experiments and reflections as a JSON file. Exports contain sensitive information; keep them somewhere private. This version does not support importing exports.</p><button class="secondary" data-action="export">Export my data</button></section><section class="card"><h2>Clear your space</h2><p>Delete all entries and saved browser data for this app. This does not delete copies you have exported.</p><button class="danger" data-action="delete-all">Delete all my data</button></section></div>`;
+}
+function render({focus=false}={}) {
+  clearInterval(timer);
+  const route = location.hash.slice(1) || 'home';
+  const pages = { home, 'check-in':checkIn, tools:toolsPage, experiments:experimentsPage, reflect:reflectPage, learn:learnPage, privacy:privacyPage };
+  main.innerHTML = route.startsWith('tool/') ? toolPage(route.split('/')[1]) : (pages[route] || home)();
+  document.querySelectorAll('nav a').forEach(a=>{ if(a.hash === '#'+route || (route.startsWith('tool/')&&a.hash==='#tools')) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+  document.title = `${({home:'Today','check-in':'Check in',tools:'Practise',experiments:'Experiments',reflect:'Reflect',learn:'Learn & support',privacy:'Your data'})[route] || 'Practice'} · Cravings Lab`;
+  if (focus) { main.focus({preventScroll:true}); window.scrollTo(0,0); }
+}
+window.addEventListener('hashchange',()=>{toolStep=0;render({focus:true});});
+document.addEventListener('input', e=>{
+  if(e.target.type==='range') document.querySelector('#'+e.target.id+'-out').value=e.target.value;
+});
+document.addEventListener('submit',e=>{
+  const form=e.target;
+  if(!['check-form','experiment-form','experiment-review','reflection-form'].includes(form.id)) return;
+  e.preventDefault();
+  const data=Object.fromEntries(new FormData(form));
+  if(form.id==='check-form') {
+    state.entries.push({id:uid(),created:new Date().toISOString(),hunger:Number(data.hunger),craving:Number(data.craving),context:data.context||'',mood:data.mood||'',control:data.control||'',food:data.food?.trim()||'',note:data.note?.trim()||''}); save();
+    const hard = data.control==='Hard to stop';
+    const hungry = Number(data.hunger)>=7 || data.context==='Missed a meal';
+    main.innerHTML = `<div class="exercise"><section class="save-success"><span class="badge">A MOMENT NOTICED</span><h2>Check-in saved.</h2><p>${hard ? 'Feeling unable to stop can be upsetting. You deserve support, without judgement. If this repeats or causes distress, consider speaking with your GP or an eating-disorder professional.' : hungry ? 'You noticed hunger or a missed meal. Eating something satisfying may be a kind next step; you don’t need to delay it.' : 'You’ve made a little space to notice what’s happening. Nothing else is required.'}</p><div class="actions">${btn(hard ? 'Explore support' : 'Back to today',hard ? '#learn' : '#home')}${btn('See my reflections','#reflect','secondary')}</div></section><div style="margin-top:20px">${modeNote()}</div></div>`;
+    main.focus(); window.scrollTo(0,0);
+  }
+  if(form.id==='experiment-form') {
+    if(!data.plan.trim() || !data.notice.trim() || (selectedExperiment==='custom'&&!data.name.trim())) { announce('Add a short plan and something you want to notice.'); return; }
+    if(state.experiments.some(x=>x.status==='active')) return;
+    state.experiments.push({id:uid(),created:new Date().toISOString(),name:data.name?.trim()||experimentOptions[selectedExperiment].name,plan:data.plan.trim(),notice:data.notice.trim(),status:'active'});save();selectedExperiment='';render({focus:true});announce('Your experiment is ready. Review whenever it feels useful.');
+  }
+  if(form.id==='experiment-review') {
+    if(!data.result.trim()) {announce('Add a few words about what you noticed.');return;}
+    const active=state.experiments.find(x=>x.status==='active');active.status='completed';active.result=data.result.trim();active.finished=new Date().toISOString();save();render({focus:true});announce('Experiment reflection saved.');
+  }
+  if(form.id==='reflection-form') {
+    if(!data.note.trim()) {announce('Add a few words to your reflection.');return;}
+    state.reviews.push({id:uid(),kind:'reflection',created:new Date().toISOString(),note:data.note.trim()});save();render({focus:true});announce('Reflection saved.');
+  }
+});
+document.addEventListener('click',async e=>{
+  const sameLink = e.target.closest('a[href^="#"]');
+  if (sameLink && sameLink.hash === location.hash && !e.ctrlKey && !e.metaKey && !e.shiftKey) { e.preventDefault(); toolStep=0; render({focus:true}); return; }
+  const target=e.target.closest('[data-action]'); if(!target) return;
+  const action=target.dataset.action;
+  if(action==='enable-storage') {
+    try { if(!storage) throw new Error('Unavailable'); storage.setItem(STORAGE_KEY,JSON.stringify(state));persistent=true;storageFailed=false;render();announce('Device saving is on. Entries stay in this browser.'); }
+    catch {storageFailed=true;announce('Device storage is unavailable. You can still use this tab and export your data.');}
+  }
+  if(action==='disable-storage') {
+    try {storage?.removeItem(STORAGE_KEY);persistent=false;render();announce('Saved browser copy removed. Current entries remain only in this tab.');}
+    catch {announce('Unable to remove browser storage. Use your browser’s site-data controls to clear it.');}
+  }
+  if(action==='tool-next'||action==='tool-back'){toolStep+=action==='tool-next'?1:-1;render({focus:true});}
+  if(action==='save-practice') {
+    const helpful=document.querySelector('input[name=helpful]:checked')?.value;
+    if(!helpful){announce('Choose how the practice felt, or finish without saving.');return;}
+    state.reviews.push({id:uid(),kind:'practice',tool:target.dataset.tool,helpful,created:new Date().toISOString()});save();location.hash='reflect';announce('Practice reflection saved.');
+  }
+  if(action==='start-timer') {
+    clearInterval(timer);let remaining=60;target.disabled=true;target.textContent='Timer running';const start=Date.now();
+    timer=setInterval(()=>{remaining=Math.max(0,60-Math.floor((Date.now()-start)/1000));const element=document.querySelector('#timer');if(!element){clearInterval(timer);return;}element.textContent=`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`;if(!remaining){clearInterval(timer);target.textContent='Minute complete';announce('A minute has passed. Choose your next step whenever you’re ready.');}},250);
+  }
+  if(action==='choose-experiment'){selectedExperiment=target.dataset.id;render();document.querySelector('#experiment-editor').scrollIntoView({block:'nearest'});document.querySelector('#exp-name, #exp-plan')?.focus({preventScroll:true});}
+  if(action==='cancel-experiment'){selectedExperiment='';render();}
+  if(action==='stop-experiment'){const active=state.experiments.find(x=>x.status==='active');if(active){active.status='stopped';active.finished=new Date().toISOString();save();render({focus:true});announce('Experiment stopped. You can choose something different, or take a break.');}}
+  if(action==='delete-entry'||action==='delete-review'){const key=action==='delete-entry'?'entries':'reviews';state[key]=state[key].filter(x=>x.id!==target.dataset.id);save();render();announce('Entry deleted.');}
+  if(action==='export') {
+    const blob=new Blob([JSON.stringify({...state,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`cravings-lab-${new Date().toISOString().slice(0,10)}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);announce('Export prepared. Keep your downloaded file somewhere private.');
+  }
+  if(action==='delete-all') document.querySelector('#confirm-dialog').showModal();
+});
+document.querySelector('#confirm-dialog').addEventListener('close',e=>{
+  if(e.target.returnValue!=='delete')return;
+  try{storage?.removeItem(STORAGE_KEY);}catch{announce('Unable to remove saved data. Clear this site’s data using your browser settings.');return;}
+  state=emptyState();persistent=false;selectedExperiment='';storageFailed=false;render({focus:true});announce('All app entries and saved browser data deleted.');
+});
+render();
