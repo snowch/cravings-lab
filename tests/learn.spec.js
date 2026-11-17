@@ -11,12 +11,15 @@ test('learn path explains each concept, gives feedback, and links to practice', 
     await expect(page.getByRole('heading',{level:1})).toHaveText(lesson.title);
     await expect(page.locator('nav a[aria-current=page]')).toHaveText('Learn');
     await expect(page).toHaveTitle(lesson.title+' · Cravings Lab');
-    const wrongIndex=(lesson.correct+1)%lesson.answers.length;
-    await page.getByRole('button',{name:lesson.answers[wrongIndex],exact:true}).click();
-    await expect(page.locator('#lesson-feedback')).toContainText('Consider another perspective.');
-    await page.getByRole('button',{name:lesson.answers[lesson.correct],exact:true}).click();
-    await expect(page.locator('#lesson-feedback')).toContainText('That fits the idea.');
-    await expect(page.locator('#lesson-feedback')).toContainText(lesson.explanation);
+    await expect(page.getByText(lesson.example,{exact:true})).toBeVisible();
+    await expect(page.getByRole('heading',{name:lesson.question,exact:true})).toBeHidden();
+    await page.getByText('Check your understanding',{exact:true}).press('Enter');
+    expect(new Set(lesson.answers.map(({feedback})=>feedback)).size).toBe(lesson.answers.length);
+    for (const [index, answer] of lesson.answers.entries()) {
+      await page.getByRole('button',{name:answer.text,exact:true}).click();
+      await expect(page.locator('#lesson-feedback')).toContainText(index===lesson.correct ? 'That fits the idea.' : 'Consider another perspective.');
+      await expect(page.locator('#lesson-feedback')).toContainText(answer.feedback);
+    }
     await expect(page.getByRole('link',{name:lesson.action,exact:true})).toHaveAttribute('href',lesson.href);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     if(i<lessons.length-1) await page.getByRole('link',{name:'Next lesson'}).click();
@@ -37,4 +40,17 @@ test('support stays directly accessible and practice links explain the ideas', a
   await page.getByRole('link',{name:'Support',exact:true}).click();
   await expect(page.getByRole('heading',{name:'When to speak to someone'})).toBeVisible();
   await expect(page.getByRole('heading',{name:'Sources & scope'})).toBeVisible();
+  const urgent=page.getByRole('heading',{name:'If you feel physically unwell'});
+  const evidence=page.getByRole('heading',{name:'What the evidence supports'});
+  expect(await evidence.evaluate(heading => Boolean(
+    document.querySelector('.support-layout aside').compareDocumentPosition(heading)
+      & Node.DOCUMENT_POSITION_FOLLOWING
+  ))).toBe(true);
+  const urgentBox=await urgent.boundingBox();
+  const evidenceBox=await evidence.boundingBox();
+  if (page.viewportSize().width <= 1100) {
+    expect(urgentBox.y).toBeLessThan(evidenceBox.y);
+  } else {
+    expect(urgentBox.x).toBeLessThan(evidenceBox.x);
+  }
 });
