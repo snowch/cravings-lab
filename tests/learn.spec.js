@@ -13,11 +13,11 @@ test('learn path explains each concept, gives feedback, and links to practice', 
     await expect(page).toHaveTitle(lesson.title+' · Cravings Lab');
     await expect(page.getByText(lesson.example,{exact:true})).toBeVisible();
     await expect(page.getByRole('heading',{name:lesson.question,exact:true})).toBeHidden();
-    await page.getByText('Check your understanding',{exact:true}).press('Enter');
+    await page.getByText('Try the example question',{exact:true}).press('Enter');
     expect(new Set(lesson.answers.map(({feedback})=>feedback)).size).toBe(lesson.answers.length);
     for (const [index, answer] of lesson.answers.entries()) {
       await page.getByRole('button',{name:answer.text,exact:true}).click();
-      await expect(page.locator('#lesson-feedback')).toContainText(index===lesson.correct ? 'That fits the idea.' : 'Consider another perspective.');
+      await expect(page.locator('#lesson-feedback')).toContainText(index===lesson.correct ? 'That fits the example.' : 'Try another answer.');
       await expect(page.locator('#lesson-feedback')).toContainText(answer.feedback);
     }
     await expect(page.getByRole('link',{name:lesson.action,exact:true})).toHaveAttribute('href',lesson.href);
@@ -29,13 +29,13 @@ test('learn path explains each concept, gives feedback, and links to practice', 
   await page.getByRole('link',{name:'Previous lesson'}).click();
   await expect(page.getByRole('heading',{level:1})).toHaveText(lessons[4].title);
   await page.goto('/#lesson/thoughts-and-choice');
-  await page.getByRole('link',{name:'Try cognitive defusion',exact:true}).click();
-  await expect(page.getByRole('heading',{name:'Catch the thought'})).toBeVisible();
+  await page.getByRole('link',{name:'Try Notice a craving thought',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'Notice the words'})).toBeVisible();
 });
 
 test('support stays directly accessible and practice links explain the ideas', async ({page}) => {
   await page.goto('/#tools');
-  await page.getByRole('link',{name:'Learn the idea first'}).nth(1).click();
+  await page.getByRole('link',{name:'Read the related lesson'}).nth(1).click();
   await expect(page.getByRole('heading',{level:1})).toHaveText('A thought is not an instruction');
   await page.getByRole('link',{name:'Support',exact:true}).click();
   await expect(page.getByRole('heading',{name:'When to speak to someone'})).toBeVisible();
