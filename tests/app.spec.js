@@ -167,7 +167,16 @@ test('guided practices and optional timer', async ({page}) => {
 });
 
 test('all routes fit viewport and work without storage', async ({page}) => {
-  await page.addInitScript(()=>Object.defineProperty(window,'localStorage',{get(){throw new Error('Disabled');}}));
+  await page.addInitScript(()=>{
+    const browserStorage = localStorage;
+    browserStorage.setItem('cravings-lab-v1', JSON.stringify({
+      version:1,
+      entries:[{id:'older',created:'2026-10-01T12:00:00Z',note:'Inaccessible saved check-in'}],
+      experiments:[],reviews:[]
+    }));
+    window.existingBrowserCopy = () => JSON.parse(browserStorage.getItem('cravings-lab-v1'));
+    Object.defineProperty(window,'localStorage',{get(){throw new Error('Disabled');}});
+  });
   for(const route of ['home','check-in','tools','experiments','reflect','learn','support','privacy']) {
     await page.goto('/#'+route);
     await expect(page.locator('main')).toBeVisible();
@@ -175,6 +184,18 @@ test('all routes fit viewport and work without storage', async ({page}) => {
   }
   await page.getByRole('button',{name:'Save on this device'}).click();
   await expect(page.locator('#announcement')).toContainText('Device storage is unavailable');
+  await page.getByRole('link',{name:'Check in',exact:true}).click();
+  await page.getByLabel('How strong is the urge?').selectOption('3');
+  await page.getByRole('button',{name:'Save check-in'}).click();
+  await page.getByRole('link',{name:'Your data',exact:true}).click();
+  await expect(page.locator('main').getByText(/To remove any saved copy, clear this site’s data/)).toBeVisible();
+  await page.getByRole('button',{name:'Delete all my data'}).click();
+  await expect(page.getByRole('dialog')).toContainText('from this tab. To remove any saved copy, clear this site’s data');
+  await page.getByRole('button',{name:'Delete everything'}).click();
+  await expect(page.locator('#announcement')).toContainText('Tab entries deleted. This app could not check for a saved copy.');
+  expect((await page.evaluate(()=>window.existingBrowserCopy())).entries[0].note).toBe('Inaccessible saved check-in');
+  await page.getByRole('link',{name:'Reflect',exact:true}).click();
+  await expect(page.getByRole('heading',{name:'No check-ins or reflections yet'})).toBeVisible();
 });
 
 test('a failed write identifies the older saved copy and keeps recovery controls', async ({page}) => {
