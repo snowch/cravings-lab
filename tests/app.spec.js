@@ -188,7 +188,9 @@ test('all routes fit viewport and work without storage', async ({page}) => {
   await page.getByLabel('How strong is the urge?').selectOption('3');
   await page.getByRole('button',{name:'Save check-in'}).click();
   await page.getByRole('link',{name:'Your data',exact:true}).click();
+  await expect(page.locator('main').getByText(/To remove any saved copy, clear this site’s data/)).toBeVisible();
   await page.getByRole('button',{name:'Delete all my data'}).click();
+  await expect(page.getByRole('dialog')).toContainText('from this tab. To remove any saved copy, clear this site’s data');
   await page.getByRole('button',{name:'Delete everything'}).click();
   await expect(page.locator('#announcement')).toContainText('Tab entries deleted. This app could not check for a saved copy.');
   expect((await page.evaluate(()=>window.existingBrowserCopy())).entries[0].note).toBe('Inaccessible saved check-in');

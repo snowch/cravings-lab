@@ -48,6 +48,11 @@ function modeNote(showManageLink=true) {
   if (storageFailed) return `<p class="notice" role="status">Device storage is unavailable. Your entries are in this tab. Export a copy before closing if you want to keep them.${manage}</p>`;
   return `<p class="small muted">${persistent ? 'Device saving is on for this browser.' : 'Tab-only mode. Reloading or closing the tab clears your entries.'}${manage}</p>`;
 }
+function deletionScope() {
+  return storage
+    ? 'This removes check-ins, experiments and reflections from this tab and this app’s saved browser copy.'
+    : 'This removes check-ins, experiments and reflections from this tab. To remove any saved copy, clear this site’s data in your browser settings.';
+}
 function storageBanner() {
   return `<div class="note storage-note"><div>${modeNote()}</div>${!persistent && !storageFailed ? '<a class="button secondary" href="#privacy">Device saving options</a>' : ''}</div>`;
 }
@@ -224,7 +229,7 @@ function privacyPage() {
         </details>
       </section>
       <section class="card"><h2>Download your entries</h2><p>Export the check-ins, experiments and reflections currently in this tab. Keep the JSON file somewhere private. The lab has no way to import the file.</p><button class="secondary" data-action="export">Export my data</button></section>
-      <section class="card"><h2>Delete your entries</h2><p>Delete the current entries and this app’s saved browser copy. Any downloaded files stay where you saved them.</p><button class="danger" data-action="delete-all">Delete all my data</button></section>
+      <section class="card"><h2>Delete your entries</h2><p>${deletionScope()} Any downloaded files stay where you saved them.</p><button class="danger" data-action="delete-all">Delete all my data</button></section>
     </div>`;
 }
 function render({focus=false}={}) {
@@ -419,7 +424,11 @@ document.addEventListener('click',async e=>{
     const blob=new Blob([JSON.stringify({...state,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`cravings-lab-${new Date().toISOString().slice(0,10)}.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);announce('Export prepared. Keep your downloaded file somewhere private.');
   }
-  if(action==='delete-all') document.querySelector('#confirm-dialog').showModal();
+  if(action==='delete-all'){
+    const dialog=document.querySelector('#confirm-dialog');
+    dialog.querySelector('p').textContent=deletionScope()+' Export a copy first if you want to keep your entries.';
+    dialog.showModal();
+  }
 });
 document.querySelector('#confirm-dialog').addEventListener('close',e=>{
   if(e.target.returnValue!=='delete')return;
