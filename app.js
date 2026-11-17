@@ -424,6 +424,13 @@ document.addEventListener('click',async e=>{
 document.querySelector('#confirm-dialog').addEventListener('close',e=>{
   if(e.target.returnValue!=='delete')return;
   try{storage?.removeItem(STORAGE_KEY);}catch{announce('Unable to remove saved data. Clear this site’s data using your browser settings.');return;}
-  state=emptyState();persistent=false;selectedExperiment='';storageFailed=false;render({focus:true});announce('All app entries and saved browser data deleted.');
+  state=emptyState();
+  persistent=false;
+  selectedExperiment='';
+  storageFailed=!storage;
+  render({focus:true});
+  announce(storage
+    ? 'All app entries and saved browser data deleted.'
+    : 'Tab entries deleted. This app could not check for a saved copy. To remove any saved copy, clear this site’s data in your browser settings.');
 });
 render();
