@@ -1,11 +1,11 @@
 {
-  "name": "cravings-lab",
+  "name": "wellbeing-lab",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "test": "playwright test",
-    "check": "node --check app.js && node --check model.js && node --check lessons.js",
+    "check": "node --check cravings/app.js && node --check cravings/model.js && node --check cravings/lessons.js && node --check shared/lab.js && node --check shared/model.js && node scripts/build.mjs",
     "serve": "python3 -m http.server 4173"
   },
   "devDependencies": {

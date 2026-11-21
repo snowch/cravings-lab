@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test('tab-only check-in, safe rendering, and supportive feedback', async ({page}) => {
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/');
+  await page.goto('/cravings/');
   await expect(page.getByRole('heading',{name:'Explore your cravings'})).toBeVisible();
   await page.getByRole('link',{name:'Check in',exact:true}).click();
   await page.getByLabel('How physically hungry do you feel?').selectOption('8');
@@ -19,7 +19,7 @@ test('tab-only check-in, safe rendering, and supportive feedback', async ({page}
 });
 
 test('a check-in can omit ratings and a keyboard skip keeps draft details', async ({page}) => {
-  await page.goto('/#check-in');
+  await page.goto('/cravings/#check-in');
   const hunger=page.getByLabel('How physically hungry do you feel?');
   const urge=page.getByLabel('How strong is the urge?');
   await expect(hunger).toHaveValue('');
@@ -53,7 +53,7 @@ test('older numeric ratings and new missing ratings survive reload', async ({pag
       }));
     }
   });
-  await page.goto('/#check-in');
+  await page.goto('/cravings/#check-in');
   await page.getByLabel('How strong is the urge?').selectOption('0');
   await page.getByRole('button',{name:'Save check-in'}).click();
   await page.getByRole('link',{name:'View your check-ins'}).click();
@@ -63,7 +63,7 @@ test('older numeric ratings and new missing ratings survive reload', async ({pag
 });
 
 test('device saving, export, switch to tab-only, and deletion', async ({page}) => {
-  await page.goto('/');
+  await page.goto('/cravings/');
   await page.getByRole('link',{name:'Device saving options'}).click();
   await page.getByRole('button',{name:'Save on this device'}).click();
   await page.getByRole('link',{name:'Check in',exact:true}).click();
@@ -71,9 +71,9 @@ test('device saving, export, switch to tab-only, and deletion', async ({page}) =
   await page.getByText('Hard to stop',{exact:true}).click();
   await page.getByRole('button',{name:'Save check-in'}).click();
   await expect(page.getByRole('link',{name:'Find support',exact:true})).toBeVisible();
-  await page.goto('/#reflect');await page.reload();
+  await page.goto('/cravings/#reflect');await page.reload();
   await expect(page.getByText('Some eating felt hard to stop.')).toBeVisible();
-  await page.goto('/#privacy');
+  await page.goto('/cravings/#privacy');
   const downloadPromise=page.waitForEvent('download');
   await page.getByRole('button',{name:'Export my data'}).click();
   const download=await downloadPromise;
@@ -82,17 +82,17 @@ test('device saving, export, switch to tab-only, and deletion', async ({page}) =
   const data=JSON.parse(Buffer.concat(chunks).toString());expect(data.entries).toHaveLength(1);
   await page.getByRole('button',{name:'Switch to tab-only mode'}).click();
   expect(await page.evaluate(()=>localStorage.length)).toBe(0);
-  await page.goto('/#reflect');await expect(page.getByText('Some eating felt hard to stop.')).toBeVisible();
-  await page.goto('/#privacy');
+  await page.goto('/cravings/#reflect');await expect(page.getByText('Some eating felt hard to stop.')).toBeVisible();
+  await page.goto('/cravings/#privacy');
   await page.getByRole('button',{name:'Delete all my data'}).click();
   await page.getByRole('button',{name:'Keep my data'}).click();
   await page.getByRole('button',{name:'Delete all my data'}).click();
   await page.getByRole('button',{name:'Delete everything'}).click();
-  await page.goto('/#reflect');await expect(page.getByRole('heading',{name:'No check-ins or reflections yet'})).toBeVisible();
+  await page.goto('/cravings/#reflect');await expect(page.getByRole('heading',{name:'No check-ins or reflections yet'})).toBeVisible();
 });
 
 test('experiment lifecycle and reflection', async ({page}) => {
-  await page.goto('/#privacy');
+  await page.goto('/cravings/#privacy');
   await page.getByRole('button',{name:'Save on this device'}).click();
   await page.getByRole('link',{name:'Experiments',exact:true}).click();
   await page.getByRole('button',{name:/Make time for a regular meal/}).click();
@@ -132,7 +132,7 @@ test('experiment lifecycle and reflection', async ({page}) => {
 });
 
 test('guided practices and optional timer', async ({page}) => {
-  await page.goto('/#tool/defusion');
+  await page.goto('/cravings/#tool/defusion');
   for(let i=0;i<2;i++) await page.getByRole('button',{name:'Continue'}).click();
   await page.getByRole('button',{name:'Reflect',exact:false}).click();
   await page.getByText('A little',{exact:true}).click();
@@ -143,7 +143,7 @@ test('guided practices and optional timer', async ({page}) => {
   await page.getByRole('button',{name:'Save reflection',exact:true}).click();
   await expect(page.getByText('A thought can stay while I choose.')).toBeVisible();
   await page.clock.install();
-  await page.goto('/#tool/pause');
+  await page.goto('/cravings/#tool/pause');
   await page.getByRole('button',{name:'Continue'}).click();
   const start=page.getByRole('button',{name:'Start timer',exact:true});
   const stop=page.getByRole('button',{name:'Stop timer',exact:true});
@@ -178,7 +178,7 @@ test('all routes fit viewport and work without storage', async ({page}) => {
     Object.defineProperty(window,'localStorage',{get(){throw new Error('Disabled');}});
   });
   for(const route of ['home','check-in','tools','experiments','reflect','learn','support','privacy']) {
-    await page.goto('/#'+route);
+    await page.goto('/cravings/#'+route);
     await expect(page.locator('main')).toBeVisible();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   }
@@ -215,7 +215,7 @@ test('a failed write identifies the older saved copy and keeps recovery controls
     };
   });
   const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem('cravings-lab-v1')));
-  await page.goto('/#reflect');
+  await page.goto('/cravings/#reflect');
   await page.getByLabel('What did you notice, and what could help next?').fill('A reflection held in this tab');
   await page.getByRole('button',{name:'Save reflection',exact:true}).click();
   await expect(page.locator('#announcement')).toContainText('The saved copy may still show earlier entries.');
@@ -234,7 +234,7 @@ test('a failed write identifies the older saved copy and keeps recovery controls
   await expect(retry).toHaveCount(0);
 
   await page.evaluate(() => { window.blockDeviceWrites = true; });
-  await page.goto('/#reflect');
+  await page.goto('/cravings/#reflect');
   await page.getByRole('button',{name:/Delete check-in/}).click();
   await expect(page.locator('#announcement')).toContainText('The saved copy may still show earlier entries.');
   await expect(page.getByText('Earlier check-in',{exact:true})).toHaveCount(0);
@@ -242,6 +242,6 @@ test('a failed write identifies the older saved copy and keeps recovery controls
   await page.getByRole('link',{name:'Your data',exact:true}).click();
   await disable.click();
   expect(await stored()).toBeNull();
-  await page.goto('/#reflect');
+  await page.goto('/cravings/#reflect');
   await expect(page.getByText('A reflection held in this tab',{exact:true})).toBeVisible();
 });
