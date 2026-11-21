@@ -1,0 +1,42 @@
+[
+  {
+    "slug": "cravings",
+    "title": "Cravings",
+    "summary": "Understand cravings, check what you need and explore optional practices and small experiments."
+  },
+  {
+    "slug": "starting-and-returning",
+    "title": "Starting and Returning",
+    "summary": "Make a meaningful task easier to begin, reach a visible result and leave a place to resume."
+  },
+  {
+    "slug": "focus",
+    "title": "Focus and Attention",
+    "summary": "Shape a workable focus window, notice competing cues and make returning easier."
+  },
+  {
+    "slug": "learning",
+    "title": "Learning and Practice",
+    "summary": "Try retrieval, feedback and a feasible return to material you want to remember."
+  },
+  {
+    "slug": "decisions",
+    "title": "Decisions and Commitments",
+    "summary": "Make everyday choices clearer and compare plans with experience."
+  },
+  {
+    "slug": "emotions",
+    "title": "Emotional Responses",
+    "summary": "Explore a little more room between a feeling, an interpretation and a chosen response."
+  },
+  {
+    "slug": "relationships",
+    "title": "Communication and Relationships",
+    "summary": "Practise listening, checking meaning and making a clear request."
+  },
+  {
+    "slug": "rest-and-balance",
+    "title": "Rest, Enjoyment and Balance",
+    "summary": "Make room for recovery and activities worth doing for their own sake."
+  }
+]

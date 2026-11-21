@@ -225,7 +225,6 @@ function privacyPage() {
         <details>
           <summary>Who can access your entries?</summary>
           <p>The app keeps your entries on this device. It has no account or device sync. Private browsing or clearing site data may remove a saved copy.</p>
-          <p>GitHub Pages receives ordinary web requests, including your IP address. Support and source links open other websites without sending your entries.</p>
         </details>
       </section>
       <section class="card"><h2>Download your entries</h2><p>Export the check-ins, experiments and reflections currently in this tab. Keep the JSON file somewhere private. The lab has no way to import the file.</p><button class="secondary" data-action="export">Export my data</button></section>

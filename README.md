@@ -1,67 +1,70 @@
-# Cravings Lab
+# Wellbeing Lab
 
-A gentle self-reflection toolkit for understanding cravings and changing automatic patterns.
+Eight practical labs for personally chosen changes, with short lessons, case feedback, guided practice, editable plans and private observations.
 
-**Live site:** https://snowch.github.io/cravings-lab/
+**Live site:** https://snowch.github.io/wellbeing-lab/
 
-## What it does
+| Lab | Address | Main application |
+| --- | --- | --- |
+| Cravings | `cravings/` | Six lessons, check-ins, four practices and optional experiments |
+| Starting and Returning | `starting-and-returning/` | Curiosity question, prepared first action, visible result, restart note |
+| Focus and Attention | `focus/` | A feasible focus window and returning after interruptions |
+| Learning and Practice | `learning/` | Retrieval, feedback and distributed practice |
+| Decisions and Commitments | `decisions/` | Alternatives, forecasts and review conditions |
+| Emotional Responses | `emotions/` | Ordinary feelings, interpretations and chosen responses |
+| Communication and Relationships | `relationships/` | Listening, checking meaning and clear requests |
+| Rest, Enjoyment and Balance | `rest-and-balance/` | Recovery and enjoyment without productivity scores |
 
-- Lightweight hunger, craving and context check-ins, with optional mood and eating-control notes.
-- Six short lessons with examples, optional understanding checks and links into related activities.
-- Four guided practices: noticing an urge, cognitive defusion, checking needs and an optional timed pause.
-- One active experiment at a time, with editable plans and end-of-experiment reflections.
-- Personal context summaries, check-in history and practice reflections.
-- Evidence explanations and UK support links, with clear limits on diagnosis and treatment claims.
-- Tab-only mode by default; optional device storage; JSON export; individual and complete deletion.
+## Learning design
 
-No food bans, weight targets, calories, abstinence streaks, diagnosis scores, accounts or analytics. Hunger is a reason to eat, not a signal to complete a delay exercise. Repeated loss of control and distress lead toward support rather than stricter limits.
+These are voluntary learning and reflection tools, not a course that must be completed before taking action. Each new lab offers four short lessons (Starting and Returning has six), an everyday case with feedback, a domain-specific four-step practice and a plan that considers feasibility and barriers. Plans cannot remove missing resources, unsafe conditions or excessive demands.
 
-## Run locally
+Research is available in collapsed notes alongside the relevant lesson. Each note separates the finding, proposed application and remaining uncertainty, with links to original research. The combined practices and self-reports have not been validated as interventions or diagnostic measures. Outcomes inform a personal choice, rather than an ability score or general causal claim.
 
-Requires Node.js 24 and Python 3 for the development test server.
+Starting and Returning includes a working unsigned 32-bit addition model, the `0xFFFFFFFF + 1` versus `0 + 0` comparison, an adjustable session timer and a printable checklist. Its optional six-pair comparison coin-flips the order of question prompts and plain instructions within each pair. Starting within five minutes is the primary observation; finishing and wanting to return are secondary. Unavailable opportunities are separate from failures. Editing a slot updates its entry; separate comparisons are never pooled. Restart notes and the approximately fifteen-minute boundary are proposed applications, not demonstrated optimal settings.
+
+## Data and migration
+
+Entries remain in page memory by default: reloading, navigating away from a lab or closing the tab clears them. Optional device saving, JSON export and scoped deletion are available within each lab. There are no accounts, analytics or application backend. No external fonts, scripts or embeds are required.
+
+Cravings retains its original **`cravings-lab-v1`** localStorage key and data model. Renaming the repository and moving the page does not change the `snowch.github.io` origin, so existing accessible saved entries remain available. Its six lessons, support links, practices and experiment history are preserved. Other labs use **`wellbeing-lab-{slug}-v1`** keys; deleting one lab leaves others untouched. The hub does not read entries.
+
+Device storage is browser-specific, not encrypted or isolated from other applications on the same origin. Avoid device saving in a shared browser profile. Browser clearing/private mode may erase entries. Export files contain the entries; this version does not import them. Storage failures leave current data in memory and retain export/deletion controls without falsely claiming to save.
+
+The old `/cravings-lab/` website path is handled by a redirect in the main `snowch.github.io` repository, preserving hash routes. This repository must not recreate an old-named repository that would interfere with GitHub's repository redirect.
+
+## Cravings scope
+
+The original lab is informed by the supplied *Sugar and Chocolate “Addiction”* research synthesis (14 November 2026), with links to NICE NG69, NHS guidance and craving reviews. It remains adult self-reflection, not diagnosis or eating-disorder treatment. No food bans, weight targets, calorie counts or abstinence streaks. Hunger is a reason to eat, not a reason to complete a delay exercise. Clinician-delivered care evidence does not validate this app as an equivalent intervention.
+
+## Develop and verify
+
+Requires Node.js 24 and Python 3 for the local test server.
 
 ```sh
 npm ci
+npm run check
 npm run serve
 ```
 
-Open http://localhost:4173. The app is plain HTML, CSS and JavaScript modules; there is no build or runtime dependency. Serve it over HTTP rather than opening index.html as a file.
-
-## Verify
+Open http://localhost:4173. These are static HTML/CSS/JavaScript pages; each lab has a real directory URL, with hash routes for its screens. `scripts/build.mjs` generates the hub, seven app shells and printable card from `shared/content.js` and `catalogue.json`.
 
 ```sh
-npm run check
 npx playwright install chromium
 npm test
+node scripts/build.mjs --dist
 ```
 
-Outside CI, the Playwright configuration uses `/usr/bin/chromium`, provided by the development environment. Change `executablePath` in `playwright.config.js` for another local installation. In CI, Playwright uses its downloaded Chromium.
+Tests exercise the original Cravings flows and data compatibility, every new lesson's feedback, layouts from 320 to 1440 pixels, axe checks, tab-only mode, opt-in persistence, export, scoped deletion, escaped notes, comparison balance and summaries, carry results, timer behaviour and unavailable storage. Automated checks do not establish complete accessibility compliance or clinical validation. Outside CI, Playwright uses `/usr/bin/chromium`; adjust `executablePath` for another local installation.
 
-Tests exercise desktop and mobile flows, tab-only behaviour, persistence, export contents, deletion, safe rendering of notes, experiment lifecycle, practices, timer behaviour and unavailable storage. Axe checks run on core screens for WCAG A/AA rules; these automated checks do not establish complete accessibility compliance or clinical validation.
-
-## Deployment
-
-Pushing `main` runs `.github/workflows/pages.yml`. The workflow installs development dependencies, checks JavaScript, runs browser/accessibility tests, then uploads only the six static application assets to GitHub Pages. Pull requests run the checks without deployment. Set repository **Settings → Pages → Source** to **GitHub Actions**.
-
-Relative asset paths and hash-based routes support the `/cravings-lab/` project path without server rewrites.
+Pushes to `main` run tests then deploy `dist/` through `.github/workflows/pages.yml`; pull requests test without deployment. Pages source is **GitHub Actions**. No runtime server or package dependency is deployed.
 
 ## Files
 
-- `index.html`: application shell, navigation and delete confirmation.
-- `app.js`: screens, content, interactions and storage controls.
-- `lessons.js`: educational content and understanding-check explanations.
-- `model.js`: data shape, storage reading, escaping and summaries.
-- `style.css`: responsive styles, focus states and reduced-motion support.
-- `tests/`: Playwright flows and axe accessibility checks.
-
-## Privacy
-
-Tab-only mode holds entries in JavaScript memory and clears them on reload or close. Opting into device saving writes to localStorage under `cravings-lab-v1`. Disabling device saving removes the persisted copy while keeping current entries in memory. Nothing is sent to an application backend. Local storage is not encrypted or isolated from other apps served from the same origin; avoid device saving on shared browser profiles. Browser clearing/private mode may erase entries. JSON exports contain sensitive information and cannot currently be imported.
-
-GitHub Pages receives ordinary hosting requests. External source and support links open third-party sites. No external fonts, scripts, analytics or embedded services are used by the app.
-
-## Content and scope
-
-Informed by the supplied *Sugar and Chocolate “Addiction”* research synthesis (14 November 2026). Public content links to NICE NG69, NHS guidance, the sugar-addiction critical review and a review of laboratory craving interventions. Strong evidence for clinician-delivered CBT/guided self-help should not be interpreted as evidence that this app is an equivalent intervention. Brief craving techniques have more limited evidence.
-
-This is a self-reflection toolkit for adults, not a diagnostic test, clinically validated programme, medical device or substitute for eating-disorder care. Content changes should preserve that distinction and avoid promoting restriction or compensatory behaviour.
+- `cravings/`: migrated original application, content, model and styles.
+- `shared/content.js`: seven new labs' teaching content, cases, feedback, research notes and sources.
+- `shared/lab.js`, `shared/model.js`, `shared/style.css`: shared interactions, state and visual design.
+- `scripts/build.mjs`: deterministic static output generation.
+- `catalogue.json`: hub and directory descriptions.
+- `starting-and-returning/checklist.html`: generated printable session card.
+- `tests/`: desktop and mobile browser and accessibility checks.

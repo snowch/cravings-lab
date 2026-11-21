@@ -37,9 +37,7 @@ jobs:
       - uses: actions/configure-pages@v5
       - name: Prepare static site
         run: |
-          mkdir -p dist
-          cp index.html style.css app.js model.js lessons.js icon.svg dist/
-          touch dist/.nojekyll
+          node scripts/build.mjs --dist
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
