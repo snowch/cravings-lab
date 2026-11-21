@@ -41,7 +41,7 @@ for(const slug of slugs){
  });
 }
 test('tab-only, opt-in saving, export, escaping and scope isolation',async({page})=>{
- await plan(page,'focus','Focus without hidden storage');expect(await page.evaluate(()=>localStorage.length)).toBe(0);
+ await plan(page,'focus','Focus without hidden storage');await page.getByRole('link',{name:'Focus and Attention home',exact:true}).click();await expect(page.getByRole('heading',{name:'Focus and Attention',exact:true})).toBeVisible();await go(page,'focus','#plan');await expect(page.locator('#goal')).toHaveValue('Focus without hidden storage');expect(await page.evaluate(()=>localStorage.length)).toBe(0);
  await go(page,'focus','#data');await page.getByRole('button',{name:'Save on this device',exact:true}).click();
  await go(page,'focus','#log');await page.locator('#opportunity').selectOption('Available');await page.locator('#started').selectOption('Yes');await page.locator('#finished').selectOption('Yes');await page.locator('#useful').selectOption('Unsure');await page.locator('#note').fill('<img src=x onerror=alert(1)>');await page.getByRole('button',{name:'Keep this session'}).click();
  await expect(page.getByText('<img src=x onerror=alert(1)>',{exact:true})).toBeVisible();await expect(page.locator('main img')).toHaveCount(0);
